@@ -26,6 +26,38 @@
 								: '',
 						]"
 					/>
+					<Popover v-if="!sortFieldsOption.loading && sortFieldsOption.data?.length">
+						<template #target="{ togglePopover }">
+							<Button variant="subtle" @click="togglePopover()">
+								<span>
+									<SortDescendingIcon v-if="currentSortStatus.order === 'desc'" />
+									<SortAscendingIcon v-else />
+								</span>
+							</Button>
+						</template>
+						<template #body-main>
+							<div class="flex p-2">
+								<div>
+									<FormControl
+										type="autocomplete"
+										:options="sortFieldsOption.data"
+										v-model="currentSortStatus.field"
+										label="Fields"
+									>
+									</FormControl>
+								</div>
+								<div class="ml-2">
+									<FormControl
+										type="select"
+										:options="sortOrderOption"
+										v-model="currentSortStatus.order"
+										label="Order"
+									>
+									</FormControl>
+								</div>
+							</div>
+						</template>
+					</Popover>
 					<router-link :to="{ name: formViewRoute }" v-slot="{ navigate }">
 						<Button variant="solid" class="mr-2" @click="navigate">
 							<template #prefix>
@@ -84,10 +116,7 @@
 				/>
 
 				<!-- Loading Indicator -->
-				<div
-					v-if="documents.loading"
-					class="flex mt-2 items-center justify-center"
-				>
+				<div v-if="documents.loading" class="flex mt-2 items-center justify-center">
 					<LoadingIndicator class="w-8 h-8 text-gray-800" />
 				</div>
 			</div>
@@ -120,9 +149,11 @@ import {
 
 import {
 	FeatherIcon,
+	Popover,
 	createResource,
 	LoadingIndicator,
 	debounce,
+	FormControl,
 } from "frappe-ui"
 
 import TabButtons from "@/components/TabButtons.vue"
@@ -131,7 +162,8 @@ import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
 import EmployeeAdvanceItem from "@/components/EmployeeAdvanceItem.vue"
 import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue"
 import CustomIonModal from "@/components/CustomIonModal.vue"
-
+import SortAscendingIcon from "@/components/icons/SortAscendingIcon.vue"
+import SortDescendingIcon from "@/components/icons/SortDescendingIcon.vue"
 import useWorkflow from "@/composables/workflow"
 import { useListUpdate } from "@/composables/realtime"
 
@@ -162,6 +194,17 @@ const props = defineProps({
 	},
 })
 
+const sortOrderOption = [
+	{
+		value: "asc",
+		label: "Ascending",
+	},
+	{
+		value: "desc",
+		label: "Descending",
+	},
+]
+
 const listItemComponent = {
 	"Leave Application": markRaw(LeaveRequestItem),
 	"Expense Claim": markRaw(ExpenseClaimItem),
@@ -176,6 +219,10 @@ const activeTab = ref(props.tabButtons[0])
 const areFiltersApplied = ref(false)
 const appliedFilters = ref([])
 const workflowStateField = ref(null)
+const currentSortStatus = ref({
+	field: "modified",
+	order: "desc",
+})
 
 // infinite scroll
 const scrollContainer = ref(null)
@@ -225,7 +272,6 @@ const documents = createResource({
 		if (data.length === 0) {
 			return []
 		}
-
 		// convert keys and values arrays to docs object
 		const fields = data["keys"]
 		const values = data["values"]
@@ -245,6 +291,21 @@ const documents = createResource({
 		}
 
 		return pagedData
+	},
+})
+
+const sortFieldsOption = createResource({
+	url: "hrms.api.get_doctype_sortable_fields",
+	params: {
+		doctype: props.doctype,
+	},
+	transform: (data) => {
+		return data.map((field) => {
+			return {
+				value: field.fieldname,
+				label: field.label,
+			}
+		})
 	},
 })
 
@@ -274,8 +335,7 @@ function prepareFilters() {
 		}
 
 		value = filterMap[fieldname].value
-		if (condition && value)
-			appliedFilters.value.push([props.doctype, fieldname, condition, value])
+		if (condition && value) appliedFilters.value.push([props.doctype, fieldname, condition, value])
 	}
 }
 
@@ -334,6 +394,22 @@ const handleRefresh = (event) => {
 }
 
 watch(
+	() => currentSortStatus.value,
+	(newValue) => {
+		listOptions.value.order_by = `\`tab${props.doctype}\`.${newValue.field.value} ${newValue.order}`
+	},
+	{ deep: true }
+)
+
+watch(
+	() => listOptions.value,
+	() => {
+		fetchDocumentList()
+	},
+	{ deep: true }
+)
+
+watch(
 	() => activeTab.value,
 	(_value) => {
 		fetchDocumentList()
@@ -347,5 +423,6 @@ onMounted(async () => {
 	fetchDocumentList()
 
 	useListUpdate(socket, props.doctype, () => fetchDocumentList())
+	sortFieldsOption.submit()
 })
 </script>
