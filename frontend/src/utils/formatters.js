@@ -12,13 +12,13 @@ export const formatCurrency = (value, currency) => {
 	// hack: if value contains a space, it is already formatted
 	if (value?.toString().trim().includes(" ")) return value
 
-	const locale =
-		settings.doc?.country == "India" ? "en-IN" : settings.doc?.language
+	const locale = settings.doc?.country == "India" ? "en-IN" : navigator.language
 
 	const formatter = Intl.NumberFormat(locale, {
 		style: "currency",
 		currency: currency,
 		trailingZeroDisplay: "stripIfInteger",
+		currencyDisplay: "narrowSymbol",
 	})
 	return (
 		formatter
