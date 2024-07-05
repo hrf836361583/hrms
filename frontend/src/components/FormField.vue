@@ -18,7 +18,7 @@
 		<Autocomplete
 			v-if="props.fieldtype === 'Select' || props.documentList"
 			:class="isReadOnly ? 'pointer-events-none' : ''"
-			:placeholder="`Select ${props.label}`"
+			:placeholder="__('Select {0}', [props.label])"
 			:options="selectionList"
 			:modelValue="modelValue"
 			v-bind="$attrs"
@@ -45,7 +45,7 @@
 			"
 			type="textarea"
 			:value="modelValue"
-			:placeholder="`Enter ${props.label}`"
+			:placeholder="__('Enter {0}', [props.label])"
 			@input="(v) => emit('update:modelValue', v)"
 			@change="(v) => emit('change', v)"
 			v-bind="$attrs"
@@ -120,7 +120,7 @@
 			type="date"
 			v-model="date"
 			:value="modelValue"
-			:placeholder="`Select ${props.label}`"
+			:placeholder="__('Select {0}', [props.label])"
 			:formatValue="(val) => dayjs(val).format('DD-MM-YYYY')"
 			@input="(v) => emit('update:modelValue', v)"
 			@change="(v) => emit('change', v)"
@@ -133,7 +133,7 @@
 		<!-- Time -->
 		<!-- Datetime -->
 
-		<ErrorMessage :message="props.errorMessage" />
+		<ErrorMessage :message="__(props.errorMessage)" />
 	</div>
 </template>
 

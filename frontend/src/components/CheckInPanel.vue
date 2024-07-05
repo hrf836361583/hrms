@@ -1,10 +1,12 @@
 <template>
 	<div class="flex flex-col bg-white rounded w-full py-6 px-4 border-none">
-		<h2 class="text-lg font-bold text-gray-900">Hey, {{ employee?.data?.first_name }} 👋</h2>
+		<h2 class="text-lg font-bold text-gray-900">
+			{{ __("Hey, {0} 👋", [employee?.data?.first_name]) }}
+		</h2>
 
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
 			<div class="font-medium text-sm text-gray-500 mt-1.5" v-if="lastLog">
-				Last {{ lastLogType }} was at {{ lastLogTime }}
+				{{ __("Last {0} was at {1}", [__(lastLogType), lastLogTime]) }}
 			</div>
 			<Button
 				class="mt-4 mb-1 drop-shadow-sm py-5 text-base"
@@ -64,7 +66,7 @@
 			</template>
 
 			<Button variant="solid" class="w-full py-5 text-sm" @click="submitLog(nextAction.action)">
-				Confirm {{ nextAction.label }}
+				{{ __("Confirm {0}", [nextAction.label]) }}
 			</Button>
 		</div>
 	</ion-modal>
@@ -80,6 +82,7 @@ const DOCTYPE = "Employee Checkin"
 const socket = inject("$socket")
 const employee = inject("$employee")
 const dayjs = inject("$dayjs")
+const __ = inject("$translate")
 const checkinTimestamp = ref(null)
 const latitude = ref(0)
 const longitude = ref(0)
@@ -111,30 +114,35 @@ const lastLogType = computed(() => {
 
 const nextAction = computed(() => {
 	return lastLog?.value?.log_type === "IN"
-		? { action: "OUT", label: "Check Out" }
-		: { action: "IN", label: "Check In" }
+		? { action: "OUT", label: __("Check Out") }
+		: { action: "IN", label: __("Check In") }
 })
 
 const lastLogTime = computed(() => {
 	const timestamp = lastLog?.value?.time
 	const formattedTime = dayjs(timestamp).format("hh:mm a")
 
-	if (dayjs(timestamp).isToday()) return formattedTime
-	else if (dayjs(timestamp).isYesterday()) return `${formattedTime} yesterday`
-	else if (dayjs(timestamp).isSame(dayjs(), "year"))
-		return `${formattedTime} on ${dayjs(timestamp).format("D MMM")}`
+	if (dayjs(timestamp).isToday()) {
+		return formattedTime
+	}
+	else if (dayjs(timestamp).isYesterday()) {
+		return __("{0} yesterday", [formattedTime])
+	}
+	else if (dayjs(timestamp).isSame(dayjs(), __("year"))) {
+		return __("{0} on {1}", [formattedTime, dayjs(timestamp).format("D MMM")])
+	}
 
-	return `${formattedTime} on ${dayjs(timestamp).format("D MMM, YYYY")}`
+	return __( "{0} on {1}", [formattedTime, dayjs(timestamp).format("D MMM, YYYY")])
 })
 
 function handleLocationSuccess(position) {
 	latitude.value = position.coords.latitude
 	longitude.value = position.coords.longitude
 
-	locationStatus.value = `
-		Latitude: ${Number(latitude.value).toFixed(5)}°,
-		Longitude: ${Number(longitude.value).toFixed(5)}°
-	`
+	locationStatus.value = [
+		__("Latitude: {0}°", [Number(latitude.value).toFixed(5)]),
+		__("Longitude: {0}°", [Number(longitude.value).toFixed(5)]),
+	].join(", ")
 }
 
 function handleLocationError(error) {
@@ -144,9 +152,9 @@ function handleLocationError(error) {
 
 const fetchLocation = () => {
 	if (!navigator.geolocation) {
-		locationStatus.value = "Geolocation is not supported by your current browser"
+		locationStatus.value = __("Geolocation is not supported by your current browser")
 	} else {
-		locationStatus.value = "Locating..."
+		locationStatus.value = __("Locating...")
 		navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError)
 	}
 }
@@ -160,7 +168,7 @@ const handleEmployeeCheckin = () => {
 }
 
 const submitLog = (logType) => {
-	const action = logType === "IN" ? "Check-in" : "Check-out"
+	const actionLabel = logType === "IN" ? __("Check-in") : __("Check-out")
 
 	checkins.insert.submit(
 		{
@@ -174,8 +182,8 @@ const submitLog = (logType) => {
 			onSuccess() {
 				modalController.dismiss()
 				toast({
-					title: "Success",
-					text: `${action} successful!`,
+					title: __("Success"),
+					text: __("{0} successful!", [actionLabel]),
 					icon: "check-circle",
 					position: "bottom-center",
 					iconClasses: "text-green-500",
@@ -184,7 +192,7 @@ const submitLog = (logType) => {
 			onError() {
 				toast({
 					title: "Error",
-					text: `${action} failed!`,
+					text: __("{0} failed!", [actionLabel]),
 					icon: "alert-circle",
 					position: "bottom-center",
 					iconClasses: "text-red-500",
