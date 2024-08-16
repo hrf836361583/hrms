@@ -32,6 +32,18 @@
 							Login
 						</Button>
 					</form>
+
+					<div v-if="authProviders.data?.length" class="mt-2 space-y-2">
+						<hr>
+						<a
+							v-for="provider in authProviders.data"
+							:key="provider.name"
+							class="flex items-center justify-center gap-2 transition-colors focus:outline-none text-gray-800 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 focus-visible:ring focus-visible:ring-gray-400 h-7 text-base p-2 rounded"
+							:href="provider.auth_url"
+						>
+							Login via {{ provider.provider_name }}
+						</a>
+					</div>
 				</div>
 			</div>
 
@@ -88,7 +100,7 @@
 <script setup>
 import { IonPage, IonContent } from "@ionic/vue"
 import { inject, reactive, ref } from "vue"
-import { Input, Button, ErrorMessage, Dialog } from "frappe-ui"
+import { Input, Button, ErrorMessage, Dialog, createResource } from "frappe-ui"
 
 import FrappeHRLogo from "@/components/icons/FrappeHRLogo.vue"
 
@@ -141,4 +153,9 @@ async function submit(e) {
 		errorMessage.value = error.messages.join("\n")
 	}
 }
+
+const authProviders = createResource({
+	url: "hrms.www.hrms.oauth_providers",
+	auto: true,
+});
 </script>
