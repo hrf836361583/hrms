@@ -22,7 +22,7 @@
 				<Badge
 					variant="outline"
 					:theme="statusMap[status]"
-					:label="status"
+					:label="__(status, null, 'Expense Claim')"
 					size="md"
 				/>
 				<FeatherIcon name="chevron-right" class="h-5 w-5 text-gray-500" />
@@ -51,6 +51,7 @@ import { getCompanyCurrency } from "@/data/currencies"
 import { formatCurrency } from "@/utils/formatters"
 
 const dayjs = inject("$dayjs")
+const __ = inject("$translate")
 const props = defineProps({
 	doc: {
 		type: Object,
@@ -92,11 +93,10 @@ const status = computed(() => {
 })
 
 const claimTitle = computed(() => {
-	let title = props.doc.expense_type
+	let title = __(props.doc.expense_type)
 	if (props.doc.total_expenses > 1) {
-		title += ` & ${props.doc.total_expenses - 1} more`
+		title = __("{0} & {1} more", title, [props.doc.total_expenses - 1])
 	}
-
 	return title
 })
 

@@ -30,28 +30,31 @@ import HomeIcon from "@/components/icons/HomeIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
 import SalaryIcon from "@/components/icons/SalaryIcon.vue"
+import { inject } from "vue"
+
+const __ = inject("$translate")
 
 const route = useRoute()
 
 const tabItems = [
 	{
 		icon: HomeIcon,
-		title: "Home",
+		title: __("Home"),
 		route: "/home",
 	},
 	{
 		icon: LeaveIcon,
-		title: "Leaves",
+		title: __("Leaves"),
 		route: "/dashboard/leaves",
 	},
 	{
 		icon: ExpenseIcon,
-		title: "Expenses",
+		title: __("Expenses"),
 		route: "/dashboard/expense-claims",
 	},
 	{
 		icon: SalaryIcon,
-		title: "Salary",
+		title: __("Salary"),
 		route: "/dashboard/salary-slips",
 	},
 ]

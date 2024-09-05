@@ -8,7 +8,7 @@
 			class="w-full flex flex-row gap-2 pt-8 pb-5 border-b justify-center items-center sticky top-0 z-[100]"
 		>
 			<span class="text-gray-900 font-bold text-lg text-center">
-				{{ document?.doctype }}
+				{{ __(document?.doctype) }}
 			</span>
 			<FeatherIcon
 				name="external-link"
@@ -32,7 +32,7 @@
 						'flex w-full',
 					]"
 				>
-					<div class="text-gray-600 text-base">{{ field.label }}</div>
+					<div class="text-gray-600 text-base">{{ __(field.label, null, props.modelValue?.doctype) }}</div>
 					<component
 						v-if="field.fieldtype === 'Table'"
 						:is="field.component"
@@ -51,7 +51,7 @@
 					class="flex flex-col gap-2 w-full"
 					v-if="attachedFiles?.data?.length"
 				>
-					<div class="text-gray-600 text-base">Attachments</div>
+					<div class="text-gray-600 text-base">{{ __('Attachments') }}</div>
 					<ul class="w-full flex flex-col items-center gap-2">
 						<li
 							class="bg-gray-100 rounded p-2 w-full"
@@ -92,7 +92,7 @@
 				<template #prefix>
 					<FeatherIcon name="x" class="w-4" />
 				</template>
-				Reject
+				{{ __("Reject") }}
 			</Button>
 
 			<Button
@@ -104,7 +104,7 @@
 				<template #prefix>
 					<FeatherIcon name="check" class="w-4" />
 				</template>
-				Approve
+				{{ __("Approve") }}
 			</Button>
 		</div>
 
@@ -121,7 +121,7 @@
 				class="w-full py-5"
 				variant="solid"
 			>
-				Submit
+				{{ __("Submit") }}
 			</Button>
 		</div>
 
@@ -138,7 +138,7 @@
 				<template #prefix>
 					<FeatherIcon name="x" class="w-4" />
 				</template>
-				Cancel
+				{{ __("Cancel") }}
 			</Button>
 		</div>
 
@@ -154,7 +154,7 @@
 </template>
 
 <script setup>
-import { computed, ref, defineAsyncComponent, onMounted } from "vue"
+import { computed, inject, ref, defineAsyncComponent, onMounted } from "vue"
 import { IonModal, modalController } from "@ionic/vue"
 import { useRouter } from "vue-router"
 import {
@@ -172,6 +172,8 @@ import { getCompanyCurrency } from "@/data/currencies"
 import { formatCurrency } from "@/utils/formatters"
 
 import useWorkflow from "@/composables/workflow"
+
+const __ = inject("$translate")
 
 const props = defineProps({
 	fields: {
@@ -268,18 +270,18 @@ const approvalField = computed(() => {
 })
 
 const getSuccessMessage = ({ status = "", docstatus = 0 }) => {
-	if (status) return `${status} successfully!`
+	if (status) return __([status], __('{0} successfully!'))
 	else if (docstatus)
-		return `Document ${
-			docstatus === 1 ? "submitted" : "cancelled"
-		} successfully!`
+		return __('Document {0}', [
+			docstatus === 1 ? __("submitted") : __("cancelled")]
+			, __('successfully!'))
 }
 
 const getFailureMessage = ({ status = "", docstatus = 0 }) => {
 	if (status)
-		return `${status === "Approved" ? "Approval" : "Rejection"} failed!`
+		return __([status === __("Approved") ? __("Approval") : __("Rejection")], '{0}failed!')
 	else if (docstatus)
-		return `Document ${docstatus === 1 ? "submission" : "cancellation"} failed!`
+		return __('Document {0} failed!', [docstatus === 1 ? __("submission") : __("cancellation")])
 }
 
 const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
@@ -295,7 +297,7 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 				if (docstatus !== 0) modalController.dismiss()
 
 				toast({
-					title: "Success",
+					title: __("Success"),
 					text: getSuccessMessage({ status, docstatus }),
 					icon: "check-circle",
 					position: "bottom-center",
@@ -304,7 +306,7 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 			},
 			onError() {
 				toast({
-					title: "Error",
+					title: __("Error"),
 					text: getFailureMessage({ status, docstatus }),
 					icon: "alert-circle",
 					position: "bottom-center",

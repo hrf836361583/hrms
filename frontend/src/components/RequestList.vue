@@ -27,11 +27,11 @@
 				@click="navigate"
 				class="w-full !text-gray-600 py-6 text-sm border-none bg-white hover:bg-white"
 			>
-				View List
+				{{ __("View List") }}
 			</Button>
 		</router-link>
 	</div>
-	<EmptyState message="You have no requests" v-else />
+	<EmptyState :message="__('You have no requests')" v-else />
 
 	<ion-modal
 		ref="modal"
