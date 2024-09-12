@@ -43,10 +43,45 @@ frappe.ui.form.on("Leave Allocation", {
 
 		if (!frm.doc.__islocal && frm.doc.leave_policy_assignment) {
 			frappe.db.get_value("Leave Type", frm.doc.leave_type, "is_earned_leave", (r) => {
-				if (cint(r?.is_earned_leave))
-					frm.set_df_property("new_leaves_allocated", "read_only", 1);
+				if (!r?.is_earned_leave) return;
+				frm.set_df_property("new_leaves_allocated", "read_only", 1);
+				frm.trigger("add_allocate_leaves_button");
 			});
 		}
+	},
+
+	add_allocate_leaves_button: async function (frm) {
+		const { message: monthly_earned_leave } = await frappe.call({
+			method: "get_monthly_earned_leave",
+			doc: frm.doc,
+		});
+
+		frm.add_custom_button(__("Allocate Leaves Manually"), function () {
+			const dialog = new frappe.ui.Dialog({
+				title: "Enter details",
+				fields: [
+					{
+						label: "New Leaves to be Allocated",
+						fieldname: "new_leaves",
+						fieldtype: "Float",
+					},
+				],
+				primary_action_label: "Allocate",
+				primary_action({ new_leaves }) {
+					frappe.call({
+						method: "allocate_leaves_manually",
+						doc: frm.doc,
+						args: { new_leaves },
+						callback: function () {
+							frm.reload_doc();
+						},
+					});
+					dialog.hide();
+				},
+			});
+			dialog.fields_dict.new_leaves.set_value(monthly_earned_leave);
+			dialog.show();
+		});
 	},
 
 	expire_allocation: function (frm) {
@@ -110,6 +145,7 @@ frappe.ui.form.on("Leave Allocation", {
 			);
 		}
 	},
+
 	calculate_total_leaves_allocated: function (frm) {
 		if (cint(frm.doc.carry_forward) == 1 && frm.doc.leave_type && frm.doc.employee) {
 			return frappe.call({
