@@ -3,7 +3,9 @@ from frappe import _
 from frappe.model import get_permitted_fields
 from frappe.model.workflow import get_workflow_name
 from frappe.query_builder import Order
-from frappe.utils import getdate, strip_html
+from frappe.utils import add_days, date_diff, getdate, strip_html
+
+from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
 SUPPORTED_FIELD_TYPES = [
 	"Link",
@@ -115,6 +117,100 @@ def are_push_notifications_enabled() -> bool:
 		return False
 
 
+# Attendance
+@frappe.whitelist()
+def get_attendance_calendar_events(employee: str, from_date: str, to_date: str) -> dict[str, str]:
+	holidays = get_holidays_for_calendar(employee, from_date, to_date)
+	attendance = get_attendance_for_calendar(employee, from_date, to_date)
+	events = {}
+
+	date = getdate(from_date)
+	while date_diff(to_date, date) >= 0:
+		date_str = date.strftime("%Y-%m-%d")
+		if date in holidays:
+			events[date_str] = "Holiday"
+		elif date in attendance:
+			events[date_str] = attendance[date]
+		date = add_days(date, 1)
+
+	return events
+
+
+def get_attendance_for_calendar(employee: str, from_date: str, to_date: str) -> list[dict[str, str]]:
+	attendance = frappe.get_all(
+		"Attendance",
+		{"employee": employee, "attendance_date": ["between", [from_date, to_date]]},
+		["attendance_date", "status"],
+	)
+	return {d["attendance_date"]: d["status"] for d in attendance}
+
+
+def get_holidays_for_calendar(employee: str, from_date: str, to_date: str) -> list[str]:
+	if holiday_list := get_holiday_list_for_employee(employee, raise_exception=False):
+		return frappe.get_all(
+			"Holiday",
+			filters={"parent": holiday_list, "holiday_date": ["between", [from_date, to_date]]},
+			pluck="holiday_date",
+		)
+
+	return []
+
+
+@frappe.whitelist()
+def get_shift_request_approvers(employee: str) -> str | list[str]:
+	shift_request_approver, department = frappe.get_cached_value(
+		"Employee",
+		employee,
+		["shift_request_approver", "department"],
+	)
+
+	department_approvers = []
+	if department:
+		department_approvers = get_department_approvers(department, "shift_request_approver")
+		if not shift_request_approver:
+			shift_request_approver = frappe.db.get_value(
+				"Department Approver",
+				{"parent": department, "parentfield": "shift_request_approver", "idx": 1},
+				"approver",
+			)
+
+	shift_request_approver_name = frappe.db.get_value("User", shift_request_approver, "full_name", cache=True)
+
+	if shift_request_approver and shift_request_approver not in [
+		approver.name for approver in department_approvers
+	]:
+		department_approvers.insert(
+			0, {"name": shift_request_approver, "full_name": shift_request_approver_name}
+		)
+
+	return department_approvers
+
+
+@frappe.whitelist()
+def get_shifts(employee: str) -> list[dict[str, str]]:
+	ShiftAssignment = frappe.qb.DocType("Shift Assignment")
+	ShiftType = frappe.qb.DocType("Shift Type")
+	return (
+		frappe.qb.from_(ShiftAssignment)
+		.join(ShiftType)
+		.on(ShiftAssignment.shift_type == ShiftType.name)
+		.select(
+			ShiftAssignment.name,
+			ShiftAssignment.shift_type,
+			ShiftAssignment.start_date,
+			ShiftAssignment.end_date,
+			ShiftType.start_time,
+			ShiftType.end_time,
+		)
+		.where(
+			(ShiftAssignment.employee == employee)
+			& (ShiftAssignment.status == "Active")
+			& (ShiftAssignment.docstatus == 1)
+		)
+		.orderby(ShiftAssignment.start_date, order=Order.asc)
+	).run(as_dict=True)
+
+
 # Leaves and Holidays
 @frappe.whitelist()
 def get_leave_applications(
@@ -211,8 +307,6 @@ def get_leave_balance_map(employee: str) -> dict[str, dict[str, float]]:
 
 @frappe.whitelist()
 def get_holidays_for_employee(employee: str) -> list[dict]:
-	from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
-
 	holiday_list = get_holiday_list_for_employee(employee, raise_exception=False)
 	if not holiday_list:
 		return []
